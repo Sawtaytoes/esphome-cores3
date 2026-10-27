@@ -1,15 +1,15 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import runtime_image, text_sensor, uart
+from esphome.components import esp32, image, text_sensor, uart
 from esphome.components.lvgl.types import lv_obj_t
 from esphome.components.lvgl.defines import add_lv_use
 from esphome.const import CONF_ID
 from esphome.core import coroutine_with_priority
 
-DEPENDENCIES = ["uart", "lvgl"]
-AUTO_LOAD = ["camera_link_protocol", "runtime_image", "text_sensor"]
+DEPENDENCIES = ["esp32", "uart", "lvgl"]
+AUTO_LOAD = ["camera_link_protocol", "image", "text_sensor"]
 ns = cg.esphome_ns.namespace("camera_link_viewer")
-CameraLinkViewer = ns.class_("CameraLinkViewer", cg.Component, uart.UARTDevice, runtime_image.RuntimeImage)
+CameraLinkViewer = ns.class_("CameraLinkViewer", cg.Component, uart.UARTDevice, image.Image_)
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(CameraLinkViewer),
     cv.Required("parent_id"): cv.use_id(lv_obj_t),
@@ -25,4 +25,5 @@ async def to_code(config):
     await uart.register_uart_device(var, config)
     cg.add(var.set_parent_widget(await cg.get_variable(config["parent_id"])))
     cg.add(var.set_status(await cg.get_variable(config["status_id"])))
-    runtime_image.enable_format("JPEG")
+    cg.add_library("JPEGDEC", "1.8.4", "https://github.com/bitbank2/JPEGDEC#1.8.4")
+    esp32.add_idf_component(name="espressif/esp-dsp", ref="1.8.2")

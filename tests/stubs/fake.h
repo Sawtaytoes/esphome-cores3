@@ -22,6 +22,7 @@ inline void lv_image_set_src(lv_obj_t *o,const void *src) {o->source=src;}
 inline void lv_image_cache_drop(const void *) {}
 inline lv_obj_t *lv_image_create(lv_obj_t *) {static lv_obj_t obj; fake_image=&obj;return &obj;}
 inline void lv_obj_center(lv_obj_t *) {}
+inline void lv_image_set_scale(lv_obj_t *,int) {}
 inline void lv_obj_invalidate(lv_obj_t *) {}
 constexpr int MALLOC_CAP_INTERNAL=1,MALLOC_CAP_8BIT=2,MALLOC_CAP_SPIRAM=4;
 inline size_t heap_caps_get_free_size(int) {return 100000;}
@@ -52,9 +53,8 @@ class ESP32CameraImage:public camera::CameraImage {public:std::vector<uint8_t> d
 class ESP32Camera:public Component {public:int requests{};void add_listener(camera::CameraListener *){}void request_image(camera::CameraRequester){requests++;}};
 }
 namespace text_sensor {class TextSensor {public:std::string state;bool has_state()const{return !state.empty();}void publish_state(const char *s){state=s;}};}
-namespace image {enum{IMAGE_TYPE_RGB565,TRANSPARENCY_OPAQUE};}
-namespace runtime_image {
-enum{JPEG};
-class RuntimeImage {public:RuntimeImage(int,int,int,void *,bool,int,int){}bool set_external_buffer(uint8_t *,int,int){return true;}bool begin_decode(size_t){return fake_begin_ok;}int feed_data(uint8_t *,size_t n){assert(!fake_image||fake_image->hidden);assert(!fake_image||!fake_image->source);fake_now+=fake_decode_delay;return fake_feed_ok?int(n):-1;}bool is_decode_finished(){return fake_finished;}bool end_decode(){fake_end_count++;return true;}void release(){fake_release_count++;}const void *get_lv_image_dsc(){return this;}};
+namespace image {
+enum{IMAGE_TYPE_RGB565,TRANSPARENCY_OPAQUE};
+class Image {public:Image(const uint8_t *p,int,int,int,int):data_start_(p){}const void *get_lv_image_dsc(){return this;}const uint8_t *get_data_start()const{return data_start_;}protected:const uint8_t *data_start_;};
 }
 }
