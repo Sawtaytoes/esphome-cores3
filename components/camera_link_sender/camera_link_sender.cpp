@@ -24,7 +24,8 @@ void CameraLinkSender::on_camera_image(const std::shared_ptr<camera::CameraImage
     return;
   }
   // The camera task can hold a frame captured before the request. Its timestamp
-  // uses esp_timer_get_time(), so only accept exposure begun after this request.
+  // uses esp_timer_get_time(); require driver capture/DMA timing after this request.
+  // This timestamp does not establish the optical exposure start.
   auto *fb = static_cast<esp32_camera::ESP32CameraImage *>(image.get())->get_raw_buffer();
   int64_t captured_us = int64_t(fb->timestamp.tv_sec) * 1000000 + fb->timestamp.tv_usec;
   if (captured_us < requested_us_) {

@@ -3,7 +3,7 @@
 Experimental components for ESPHome 2026.10.0 and ESP-IDF. Mainline
 `esp32_camera` captures baseline 320x240 JPEG; `camera_link_sender` answers one
 request at a time, while `camera_link_viewer` decodes directly to a fixed 320x240 RGB565
-buffer, scaled by LVGL to240x180. No microphone component is required. Hardware acceptance is pending.
+buffer, scaled by LVGL to 240x180. No microphone component is required. Hardware acceptance is pending.
 
 ## Wiring and recovery
 
@@ -45,7 +45,7 @@ the decoder. Header inspection is not a claim that entropy data is valid.
 
 Viewer sequence starts randomly on boot and increments across page changes.
 Only a matching pending sequence can display. A sender compares camera frame
-start timestamps against the request timestamp and discards queued older frames;
+driver capture/DMA timestamps against the request timestamp and discards queued older frames;
 recapture is scheduled after the callback returns. There is no promise of exact
 exposure control. Random sequence initialization prevents deterministic reboot
 reuse; accidental collision remains possible at 1 in 2^32.
@@ -73,8 +73,12 @@ The fixed RGB buffer remains allocated throughout the component's lifetime.
 JPEGDEC1.8.4 decodes baseline QVGA directly into little-endian RGB565 blocks; bounded
 row copies avoid RuntimeImage's per-pixel RGB8888 conversion/scaling. Actual JPEG
 mode/dimensions, block bounds, complete pixel count, decoder success, and the
-absolute publication deadline all pass before showing it. LVGL scales320x240
-by192/256 to240x180. The JPEG and RGB buffers occupy65536+153600 bytes, plus the
+absolute publication deadline all pass before showing it. LVGL scales 320x240
+by 192/256 to 240x180. Code generation explicitly enables
+`LV_DRAW_SW_SUPPORT_RGB565A8`: LVGL requires this alongside RGB565 support for
+opaque RGB565 transforms. Leaving it disabled skips transform output and can
+blend uninitialized pixels. The image itself remains opaque RGB565.
+The JPEG and RGB buffers occupy 65536+153600 bytes, plus the
 RX ring, decoder, and LVGL storage. The decoder is closed after every opened session; failure leaves the widget hidden. Cache
 and widget invalidation occur on each successful publication. The next request
 waits until decoding finishes plus100ms; stale displayed images blank after2s.
@@ -99,10 +103,23 @@ host fakes for UART, time, camera, decoder, and LVGL. It exercises expired final
 bytes/callbacks, capture freshness retry, a decode crossing the deadline, decoder
 failure, stale blanking, send timeout, shutdown, and pause/resume. The fake decoder does not establish real JPEGDEC behavior; hardware OTA
 interruption is still required. `viewer_decoder_test.cpp` also runs the actual
-viewer with the real JPEGDEC library against committed synthetic color bars,
+viewer with the real JPEGDEC library against committed synthetic color bars and a 4x3 color grid,
 truncated/invalid-entropy, progressive, and wrong-size fixtures. That check passes
-AddressSanitizer, including successful recovery and RGB565 red/blue channel checks.
+AddressSanitizer, including successful recovery and 300 grid samples across rows
+and MCU boundaries. Set `JPEGDEC_SOURCE` to the JPEGDEC1.8.4 checkout when running
+`tests/run.sh`; without it, the script explicitly reports the real decoder skipped.
 The upstream UBSan limitations below still apply.
+
+`tests/run-lvgl.sh` builds the real LVGL sources against the dashboard-generated
+`lv_conf.h`, adapting only the allocator and draw-unit startup for a standalone
+host. Set `LVGL_SOURCE`, `LVGL_CONFIG`, and `LVGL_TEST_OUTPUT`. It verifies the
+regression with RGB565A8 disabled, then requires all 36 interior grid samples
+across three replacements of the same buffer/descriptor to match with it enabled.
+The tested dashboard sources identify LVGL9.5.0. Synthetic captures:
+
+| Transform feature disabled | Transform feature enabled |
+| --- | --- |
+| ![Missing transformed pixels](images/camera-scale-before.png) | ![Correctly scaled replacement grid](images/camera-scale-after.png) |
 
 A separate host check of the dashboard's real JPEGDEC1.8.4 accepted a generated
 QVGA baseline and rejected truncated/invalid entropy. Progressive and wrong-size

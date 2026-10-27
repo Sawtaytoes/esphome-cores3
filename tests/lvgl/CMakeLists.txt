@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(camera_link_lvgl_test LANGUAGES C CXX)
+set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_USE_THORVG_INTERNAL OFF CACHE BOOL "" FORCE)
+add_subdirectory("${LVGL_SOURCE}" lvgl)
+add_executable(render ../lvgl_render_test.cpp)
+target_link_libraries(render PRIVATE lvgl m)
