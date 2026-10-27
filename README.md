@@ -7,7 +7,8 @@ Mainline ESPHome supplies the LCD, touch, I2S speaker, and RFID drivers.
 ## Supported configuration
 
 This component targets ESPHome **2026.10.0** with ESP-IDF. It is an initial
-hardware bring-up, not a camera application or voice satellite.
+hardware bring-up, not a complete inventory application or voice satellite. Experimental direct camera
+preview components are described in [camera-link.md](docs/camera-link.md).
 
 ```yaml
 external_components:
@@ -69,11 +70,11 @@ configured. Amplifier startup failure leaves display/power support usable.
 - P0_5 is USB OTG enable and remains low to preserve USB input.
 - P0_4 is microSD detect and remains an input. Interrupt pins are inputs too.
 - Port A: SDA2/SCL1. Port B: GPIO9/8, usable as a separate I2C bus.
-- Port C: GPIO17/18. Camera UART direction and firmware must be verified separately.
+- Port C: GPIO17/18. Camera RX17/TX18; see the experimental direct-preview wiring.
 - Grove power uses an increasing eight-pulse precharge before final connection.
 - Shared Grove power cannot independently switch a camera while keeping RFID powered.
 
-No live camera preview, photo storage, NAS upload, microphone input, wake word,
+The board component alone supplies no camera preview. No photo storage, NAS upload, microphone input, wake word,
 or battery-runtime claim is supplied by this component. Verify cold battery
 boots with the exact attached load, USB/dock transitions, Grove voltage,
 LCD colors, touch corners, and audible output before treating a product as ready.
