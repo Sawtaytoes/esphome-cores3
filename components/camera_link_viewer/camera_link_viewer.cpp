@@ -70,6 +70,11 @@ void CameraLinkViewer::receive_() {
   if (!enabled_ || !pending_ || parser_.type() != FRAME || parser_.sequence() != sequence_) return;
   pending_ = false;
   next_request_ = millis() + 100;
+  if (millis() - requested_at_ > 2000) {
+    hide_();
+    publish_status_("Camera unavailable");
+    return;
+  }
   size_t length = parser_.length();
   if (!is_preview_jpeg(jpeg_buffer_, length)) {
     hide_();
@@ -81,7 +86,7 @@ void CameraLinkViewer::receive_() {
   std::memset(rgb_buffer_, 0, 240 * 180 * 2);
   bool ok = set_external_buffer(rgb_buffer_, 240, 180) && begin_decode(length);
   if (ok) ok = feed_data(jpeg_buffer_, length) == int(length);
-  if (ok) ok = is_decode_finished();
+  if (ok) ok = is_decode_finished() && millis() - requested_at_ <= 2000;
   if (ok) ok = end_decode();
   next_request_ = millis() + 100;  // Schedule after decoding and publication work.
   if (!ok) {
@@ -128,7 +133,7 @@ void CameraLinkViewer::loop() {
     parser_.reset();
     publish_status_("Camera unavailable");
   }
-  if (!pending_ && int32_t(now - next_request_) >= 0 && parent_->available_for_write() >= HEADER_SIZE) request_();
+  if (!pending_ && int32_t(now - next_request_) >= 0 && parent_->available_for_write() >= int(HEADER_SIZE)) request_();
 }
 void CameraLinkViewer::dump_config() {
   ESP_LOGCONFIG(TAG, "Direct camera preview: QVGA input, 240x180 display, CRC32, sequence checks");

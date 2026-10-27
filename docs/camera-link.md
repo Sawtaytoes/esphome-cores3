@@ -90,6 +90,19 @@ g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined tests/protocol
 /tmp/camera-link-test
 ```
 
+`tests/run.sh` also compiles the actual sender/viewer implementation against small
+host fakes for UART, time, camera, decoder, and LVGL. It exercises expired final
+bytes/callbacks, capture freshness retry, a decode crossing the deadline, decoder
+failure, stale blanking, send timeout, shutdown, and pause/resume. The fake decoder
+does not establish real JPEGDEC behavior; hardware OTA interruption is still required.
+
+A separate host check of the dashboard's real JPEGDEC1.8.4 accepted a generated
+QVGA baseline and rejected truncated/invalid entropy. Progressive and wrong-size
+fixtures were excluded by the corresponding header gates. AddressSanitizer found
+no memory error, but UBSan reported upstream unaligned loads and negative shifts,
+including on the valid image. This is not a clean sanitizer result for JPEGDEC,
+and does not establish behavior on the ESP32-S3. No upstream code is changed here.
+
 A dashboard build and actual board tests remain mandatory. Acceptance includes
 standalone sensor/PSRAM readback and repeated decodable captures, fresh scenes
 after long idle, repeated page enter/exit, malformed JPEG decoder failures,

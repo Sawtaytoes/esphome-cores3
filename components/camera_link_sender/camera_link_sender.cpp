@@ -19,6 +19,10 @@ void CameraLinkSender::set_enabled(bool enabled) {
 void CameraLinkSender::setup() { camera_->add_listener(this); }
 void CameraLinkSender::on_camera_image(const std::shared_ptr<camera::CameraImage> &image) {
   if (!enabled_ || !awaiting_ || image_ || !image->was_requested_by(camera::WEB_REQUESTER)) return;
+  if (millis() - requested_at_ > 2000) {
+    awaiting_ = retry_capture_ = false;
+    return;
+  }
   // The camera task can hold a frame captured before the request. Its timestamp
   // uses esp_timer_get_time(), so only accept exposure begun after this request.
   auto *fb = static_cast<esp32_camera::ESP32CameraImage *>(image.get())->get_raw_buffer();
