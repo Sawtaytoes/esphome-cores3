@@ -47,7 +47,12 @@ reset pins 0 and 9; it is not a general expander API.
 `set_backlight(level)` maps positive levels to the 2.6-3.3 V backlight range.
 Zero turns off DLDO1. CPU rails and charging settings remain unchanged.
 `battery_voltage()`, `battery_level()`, `charging()`, and `usb_power()` expose
-polled PMIC telemetry. Voltage and level become NaN on failed reads.
+polled PMIC telemetry. Voltage and level become NaN on failed reads. The two
+status getters return `std::optional<bool>`; a missing value means an invalid
+read. Consumers must invalidate the affected entity rather than retain its
+previous state. For a template binary sensor, call its `invalidate_state()` when
+the optional is empty, then return the optional. Successful later reads recover
+the entity.
 
 The AW88298 is configured for **standard I2S, 16 kHz, 16-bit slots, 32 BCLK per
 frame, left channel**, with -18 dB hardware attenuation and pass-through boost.

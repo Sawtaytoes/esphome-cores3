@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <optional>
 
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
@@ -22,8 +23,8 @@ class CoreS3Board : public PollingComponent, public i2c::I2CDevice {
   void write_reset(uint8_t pin, bool value);
   float battery_voltage() const { return battery_voltage_; }
   float battery_level() const { return battery_level_; }
-  bool charging() const { return charging_; }
-  bool usb_power() const { return usb_power_; }
+  std::optional<bool> charging() const { return charging_valid_ ? std::optional<bool>(charging_) : std::nullopt; }
+  std::optional<bool> usb_power() const { return usb_valid_ ? std::optional<bool>(usb_power_) : std::nullopt; }
   bool audio_ready() const { return audio_ready_; }
 
  protected:
@@ -37,6 +38,8 @@ class CoreS3Board : public PollingComponent, public i2c::I2CDevice {
   bool audio_ready_{false};
   bool charging_{false};
   bool usb_power_{false};
+  bool charging_valid_{false};
+  bool usb_valid_{false};
   float battery_voltage_{NAN};
   float battery_level_{NAN};
 };

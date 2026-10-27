@@ -45,10 +45,10 @@ bool CoreS3Board::initialize_() {
       !modify8_(IO, 0x02, 0x27, 0x00) || !modify8_(IO, 0x03, 0x82, 0x00) ||
       !modify8_(IO, 0x04, 0x27, 0x00) || !modify8_(IO, 0x05, 0x82, 0x00)) return false;
   // Leave CPU/DC-DC rails, charging voltage/current, and thermal protection intact.
-  // ALDO1 supplies amplifier digital I/O, ALDO2 the analog rail.
-  // DLDO1 supplies LCD backlight.
-  if (!modify8_(PMU, 0x92, 0x1F, 13) || !modify8_(PMU, 0x93, 0x1F, 28) ||
-      !modify8_(PMU, 0x99, 0x1F, 23) || !modify8_(PMU, 0x90, 0x83, 0x83) ||
+  // ALDO1 supplies amplifier digital I/O; DLDO1 supplies LCD backlight.
+  // ALDO2 is the microphone ADC analog rail and is left unchanged.
+  if (!modify8_(PMU, 0x92, 0x1F, 13) ||
+      !modify8_(PMU, 0x99, 0x1F, 23) || !modify8_(PMU, 0x90, 0x81, 0x81) ||
       !modify8_(PMU, 0x30, 0x05, 0x05)) return false;
   if (!modify8_(IO, 0x03, 0x80, 0x80)) return false;
   delay(10);
@@ -138,9 +138,18 @@ void CoreS3Board::update() {
   else battery_voltage_ = NAN;
   if (read8_(PMU, 0xA4, percent) && percent <= 100) battery_level_ = percent;
   else battery_level_ = NAN;
-  if (read8_(PMU, 0x00, status0)) usb_power_ = (status0 & 0x20) != 0;
-  if (read8_(PMU, 0x01, status1)) charging_ = ((status1 >> 5) & 3) == 1;
-  ESP_LOGD(TAG, "Battery %.3f V, %.0f%%, USB %d, charging %d", battery_voltage_, battery_level_, usb_power_, charging_);
+  usb_valid_ = read8_(PMU, 0x00, status0);
+  charging_valid_ = read8_(PMU, 0x01, status1);
+  if (usb_valid_) usb_power_ = (status0 & 0x20) != 0;
+  if (charging_valid_) charging_ = ((status1 >> 5) & 3) == 1;
+  if (!usb_valid_ || !charging_valid_) {
+    status_set_warning("PMIC status read failed");
+    ESP_LOGW(TAG, "PMIC status unavailable; invalidate affected binary sensors");
+  } else {
+    status_clear_warning();
+  }
+  ESP_LOGD(TAG, "Battery %.3f V, %.0f%%, USB %d, charging %d", battery_voltage_, battery_level_,
+           usb_valid_ ? int(usb_power_) : -1, charging_valid_ ? int(charging_) : -1);
 }
 
 void CoreS3Board::dump_config() {
