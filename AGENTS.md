@@ -30,8 +30,9 @@ resolutions, and checks on the PR. Resolve material findings before merge and
 repeat review after substantive fixes. Passing CI and self-review do not replace
 this review. If no reviewer is available, report the gate instead of merging.
 
-CI runs `tests/run.sh` with the real JPEGDEC 1.8.4, compiles every file in
-`examples/` with ESPHome 2026.10.0, and runs Charcuterie's shared Python and C++
+CI runs `tests/run.sh` with the real JPEGDEC 1.8.4, compiles each example
+named in the workflow's `examples` matrix with ESPHome 2026.10.0 (add a new
+example file to that matrix), and runs Charcuterie's shared Python and C++
 lint over the changed files. A pull request merges only when CI passes. CI does
 not replace the hardware checks below.
 
