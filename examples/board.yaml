@@ -1,0 +1,63 @@
+# Build-only example: the CoreS3 board component with the mainline display and
+# touch drivers, wired as the README describes. CI compiles it with the ESPHome
+# version this repository targets. It is not a production device configuration.
+esphome:
+  name: cores3-example
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+logger:
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [cores3_board]
+
+i2c:
+  - id: board_bus
+    sda: GPIO12
+    scl: GPIO11
+    setup_priority: 1001
+  - id: grove_bus
+    sda: GPIO9
+    scl: GPIO8
+    setup_priority: 999
+
+cores3_board:
+  id: board_power
+  i2c_id: board_bus
+
+spi:
+  clk_pin: GPIO36
+  mosi_pin: GPIO37
+
+display:
+  - platform: mipi_spi
+    model: M5CORE
+    cs_pin: GPIO3
+    dc_pin: GPIO35
+    reset_pin:
+      cores3_board: board_power
+      number: 9
+    lambda: |-
+      it.fill(Color(0, 0, 0));
+
+touchscreen:
+  - platform: ft63x6
+    i2c_id: board_bus
+
+sensor:
+  - platform: template
+    name: Battery voltage
+    unit_of_measurement: V
+    lambda: return id(board_power).battery_voltage();
+    update_interval: 30s
