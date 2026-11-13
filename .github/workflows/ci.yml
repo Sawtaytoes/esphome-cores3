@@ -1,0 +1,41 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  # Charcuterie's shared lint: ruff over changed Python and clang-format over
+  # changed C++. It reads the diff, not the tree. This repo vendors no code,
+  # so nothing is excluded.
+  nativeLint:
+    uses: Sawtaytoes/charcuterie/.github/workflows/shared-native-lint.yml@workflows-v1
+  hostTests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # The viewer's decoder test runs the real JPEGDEC that ESPHome uses,
+      # pinned to the 1.8.4 commit that docs/camera-link.md was verified with.
+      - uses: actions/checkout@v7
+        with:
+          repository: bitbank2/JPEGDEC
+          ref: ae9705abeeebd057c3d0a50c1e58bdec532c76c6
+          path: .ci/JPEGDEC
+      - name: Run the protocol, lifecycle, and decoder tests
+        env:
+          JPEGDEC_SOURCE: ${{ github.workspace }}/.ci/JPEGDEC
+        run: sh tests/run.sh
+  examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [board]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile the CoreS3 example
+        run: >-
+          docker run --rm -v "$GITHUB_WORKSPACE:/config"
+          ghcr.io/esphome/esphome:2026.10.0
+          compile examples/${{ matrix.example }}.yaml
